@@ -55,11 +55,17 @@ export const teamAPI = {
 
 // Infrastructure API calls
 export const infrastructureAPI = {
-  getServers: () => api.get('/infrastructure/servers'),
-  getServerStatus: (serverId: string) =>
-    api.get(`/infrastructure/servers/${serverId}`),
-  getMetrics: () => api.get('/infrastructure/metrics'),
+  getLive: () => api.get('/admin/infrastructure'),
   getHealth: () => api.get('/admin/health'),
+};
+
+// Billing API calls
+export const billingAPI = {
+  getOverview: () => api.get('/admin/billing/overview'),
+  getSubscriptions: (params?: { page?: number; limit?: number; tier?: string; status?: string }) =>
+    api.get('/admin/billing/subscriptions', { params }),
+  getActivity: (limit = 50) =>
+    api.get('/admin/billing/activity', { params: { limit } }),
 };
 
 // Settings API calls
