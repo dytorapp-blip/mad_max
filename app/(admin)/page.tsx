@@ -18,13 +18,14 @@ const MetricCard = ({ label, value, icon: Icon, change }: any) => (
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<any>(null);
   const [health, setHealth] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = async (isInitial = false) => {
       try {
-        setLoading(true);
+        if (!isInitial) setRefreshing(true);
         const [dashData, healthData] = await Promise.all([
           dashboardAPI.getOverview(),
           healthAPI.getStatus(),
@@ -35,19 +36,19 @@ export default function Dashboard() {
         setError(null);
       } catch (err) {
         console.error('Error fetching dashboard:', err);
-        setError('Failed to load dashboard data');
+        if (isInitial) setError('Failed to load dashboard data');
       } finally {
-        setLoading(false);
+        setInitialLoading(false);
+        setRefreshing(false);
       }
     };
 
-    fetchDashboardData();
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchDashboardData, 30000);
+    fetchDashboardData(true);
+    const interval = setInterval(() => fetchDashboardData(false), 30000);
     return () => clearInterval(interval);
   }, []);
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -78,7 +79,12 @@ export default function Dashboard() {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
-            <p className="text-slate-400">Real-time SaaS operations overview</p>
+            <p className="text-slate-400">
+              Real-time SaaS operations overview
+              {refreshing && (
+                <span className="ml-2 text-slate-600 text-xs animate-pulse">· syncing…</span>
+              )}
+            </p>
           </div>
           {health && (
             <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-800 border border-slate-700">
