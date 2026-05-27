@@ -9,6 +9,7 @@ import {
   FiActivity,
   FiTarget,
   FiBarChart2,
+  FiCreditCard,
   FiLogOut,
   FiBook,
   FiHelpCircle,
@@ -32,6 +33,11 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       label: 'Analytics',
       path: '/analytics',
       icon: FiBarChart2,
+    },
+    {
+      label: 'Billing',
+      path: '/billing',
+      icon: FiCreditCard,
     },
     {
       label: 'Team Management',
