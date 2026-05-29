@@ -13,54 +13,31 @@ import {
   FiLogOut,
   FiBook,
   FiHelpCircle,
+  FiAlertCircle,
 } from 'react-icons/fi';
 
 const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
 
   const menuItems = [
-    {
-      label: 'Dashboard',
-      path: '/',
-      icon: FiHome,
-    },
-    {
-      label: 'User Management',
-      path: '/users',
-      icon: FiUsers,
-    },
-    {
-      label: 'Analytics',
-      path: '/analytics',
-      icon: FiBarChart2,
-    },
-    {
-      label: 'Billing',
-      path: '/billing',
-      icon: FiCreditCard,
-    },
-    {
-      label: 'Team Management',
-      path: '/teams',
-      icon: FiTarget,
-    },
-    {
-      label: 'Infrastructure',
-      path: '/infrastructure',
-      icon: FiActivity,
-    },
-    {
-      label: 'Settings',
-      path: '/settings',
-      icon: FiSettings,
-    }
+    { label: 'Dashboard',        path: '/',              icon: FiHome       },
+    { label: 'User Management',  path: '/users',         icon: FiUsers      },
+    { label: 'Analytics',        path: '/analytics',     icon: FiBarChart2  },
+    { label: 'Billing',          path: '/billing',       icon: FiCreditCard },
+    { label: 'Teams',            path: '/teams',         icon: FiTarget     },
+    { label: 'Appeals',          path: '/appeals',       icon: FiAlertCircle },
+    { label: 'Infrastructure',   path: '/infrastructure',icon: FiActivity   },
+    { label: 'Settings',         path: '/settings',      icon: FiSettings   },
   ];
 
   const isActive = (path: string) => {
-    if (path === '/') {
-      return pathname === '/';
-    }
+    if (path === '/') return pathname === '/';
     return pathname?.startsWith(path);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    window.location.href = '/login';
   };
 
   return (
@@ -126,7 +103,10 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
 
       {/* Footer */}
       <div className="p-3 border-t border-slate-800">
-        <button className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-200 rounded hover:bg-slate-800 transition-colors">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-200 rounded hover:bg-slate-800 transition-colors"
+        >
           <FiLogOut size={18} />
           Logout
         </button>

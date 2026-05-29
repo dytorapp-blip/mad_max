@@ -1,194 +1,118 @@
 'use client';
 
 import { useState } from 'react';
-import { FiSave, FiRefreshCw } from 'react-icons/fi';
+import { FiAlertTriangle, FiTrash2, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
+import { errorsAPI } from '@/lib/api/endpoints';
+
+type Toast = { type: 'success' | 'error'; message: string } | null;
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState('general');
-  const [settings, setSettings] = useState({
-    appName: 'Dytor Manager',
-    appVersion: '1.0.0',
-    emailFrom: 'noreply@dytor.app',
-    emailSmtp: 'smtp.dytor.app',
-    emailPort: '587',
-    enableTwoFA: true,
-    maxLoginAttempts: 5,
-    sessionTimeout: 30,
-    backupFrequency: 'daily',
-    logRetention: 90,
-  });
+  const [clearingErrors, setClearingErrors] = useState(false);
+  const [toast, setToast] = useState<Toast>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
 
-  const tabs = [
-    { id: 'general', label: 'General' },
-    { id: 'email', label: 'Email Configuration' },
-    { id: 'security', label: 'Security' },
-    { id: 'backup', label: 'Backup & Recovery' },
-  ];
+  function showToast(type: 'success' | 'error', message: string) {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 4000);
+  }
 
-  const handleSave = () => {
-    console.log('Settings saved:', settings);
-  };
+  async function handleClearErrors() {
+    if (!confirmClear) {
+      setConfirmClear(true);
+      return;
+    }
+    setClearingErrors(true);
+    setConfirmClear(false);
+    try {
+      const res = await errorsAPI.clearAll();
+      showToast('success', `Deleted ${res.data.deleted ?? 0} error log${res.data.deleted !== 1 ? 's' : ''}.`);
+    } catch {
+      showToast('error', 'Failed to clear error logs.');
+    } finally {
+      setClearingErrors(false);
+    }
+  }
 
   return (
-    <div className="p-6">
-      {/* Header */}
+    <div className="p-8 max-w-2xl">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-white mb-2">Settings</h2>
-        <p className="text-gray-400">Manage system configuration and preferences</p>
+        <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
+        <p className="text-slate-400">System configuration and maintenance actions</p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-gray-700">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-3 font-medium border-b-2 transition-colors ${
-              activeTab === tab.id
-                ? 'border-blue-600 text-blue-400'
-                : 'border-transparent text-gray-400 hover:text-white'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`mb-6 flex items-center gap-3 px-5 py-3 rounded-lg border text-sm font-medium ${
+            toast.type === 'success'
+              ? 'bg-emerald-950/40 border-emerald-800 text-emerald-300'
+              : 'bg-red-950/40 border-red-800 text-red-300'
+          }`}
+        >
+          {toast.type === 'success' ? <FiCheckCircle size={16} /> : <FiAlertCircle size={16} />}
+          {toast.message}
+        </div>
+      )}
+
+      {/* Read-only system info */}
+      <div className="rounded-lg bg-slate-800 border border-slate-700 overflow-hidden mb-8">
+        <div className="px-6 py-4 border-b border-slate-700 bg-slate-900">
+          <h2 className="text-base font-semibold text-white">System info</h2>
+        </div>
+        <div className="divide-y divide-slate-700">
+          {[
+            { label: 'Application', value: 'Dytor' },
+            { label: 'Admin dashboard', value: 'dytor_man' },
+            { label: 'Email provider', value: 'Resend' },
+            { label: 'Database', value: 'Supabase (PostgreSQL)' },
+            { label: 'Payments', value: 'Paystack' },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between px-6 py-3">
+              <span className="text-slate-400 text-sm">{label}</span>
+              <span className="text-white text-sm font-medium">{value}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-        {activeTab === 'general' && (
-          <div className="space-y-6">
+      {/* Danger zone */}
+      <div className="rounded-lg bg-red-950/20 border border-red-900/60 overflow-hidden">
+        <div className="px-6 py-4 border-b border-red-900/60 flex items-center gap-2">
+          <FiAlertTriangle className="text-red-400" size={16} />
+          <h2 className="text-base font-semibold text-red-300">Danger zone</h2>
+        </div>
+        <div className="px-6 py-5">
+          <div className="flex items-start justify-between gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Application Name</label>
-              <input
-                type="text"
-                value={settings.appName}
-                onChange={(e) => setSettings({ ...settings, appName: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-600"
-              />
+              <p className="text-white text-sm font-medium mb-1">Clear error logs</p>
+              <p className="text-slate-400 text-sm">
+                Permanently deletes all error log entries from the database. This cannot be undone.
+              </p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Version</label>
-              <input
-                type="text"
-                value={settings.appVersion}
-                readOnly
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-400 focus:outline-none"
-              />
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'email' && (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">From Email Address</label>
-              <input
-                type="email"
-                value={settings.emailFrom}
-                onChange={(e) => setSettings({ ...settings, emailFrom: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">SMTP Server</label>
-              <input
-                type="text"
-                value={settings.emailSmtp}
-                onChange={(e) => setSettings({ ...settings, emailSmtp: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">SMTP Port</label>
-              <input
-                type="number"
-                value={settings.emailPort}
-                onChange={(e) => setSettings({ ...settings, emailPort: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-600"
-              />
-            </div>
-            <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors">
-              Test Email Connection
+            <button
+              onClick={handleClearErrors}
+              disabled={clearingErrors}
+              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 ${
+                confirmClear
+                  ? 'bg-red-600 hover:bg-red-500 text-white'
+                  : 'bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600'
+              }`}
+            >
+              <FiTrash2 size={14} />
+              {confirmClear ? 'Confirm — clear all' : 'Clear logs'}
             </button>
           </div>
-        )}
-
-        {activeTab === 'security' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
-              <label className="text-sm font-medium text-gray-300">Enable Two-Factor Authentication</label>
-              <input
-                type="checkbox"
-                checked={settings.enableTwoFA}
-                onChange={(e) => setSettings({ ...settings, enableTwoFA: e.target.checked })}
-                className="w-5 h-5 rounded"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Max Login Attempts</label>
-              <input
-                type="number"
-                value={settings.maxLoginAttempts}
-                onChange={(e) => setSettings({ ...settings, maxLoginAttempts: parseInt(e.target.value) })}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Session Timeout (minutes)</label>
-              <input
-                type="number"
-                value={settings.sessionTimeout}
-                onChange={(e) => setSettings({ ...settings, sessionTimeout: parseInt(e.target.value) })}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-600"
-              />
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'backup' && (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Backup Frequency</label>
-              <select
-                value={settings.backupFrequency}
-                onChange={(e) => setSettings({ ...settings, backupFrequency: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-600"
+          {confirmClear && (
+            <p className="mt-3 text-amber-400 text-xs">
+              Click again to confirm. This will delete all error records permanently.{' '}
+              <button
+                onClick={() => setConfirmClear(false)}
+                className="underline text-slate-400 hover:text-slate-200"
               >
-                <option>hourly</option>
-                <option>daily</option>
-                <option>weekly</option>
-                <option>monthly</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Log Retention (days)</label>
-              <input
-                type="number"
-                value={settings.logRetention}
-                onChange={(e) => setSettings({ ...settings, logRetention: parseInt(e.target.value) })}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-600"
-              />
-            </div>
-            <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2">
-              <FiRefreshCw size={16} />
-              Run Backup Now
-            </button>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="mt-8 pt-6 border-t border-gray-700 flex gap-3">
-          <button
-            onClick={handleSave}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors font-medium"
-          >
-            <FiSave size={18} />
-            Save Settings
-          </button>
-          <button className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors font-medium">
-            Cancel
-          </button>
+                Cancel
+              </button>
+            </p>
+          )}
         </div>
       </div>
     </div>

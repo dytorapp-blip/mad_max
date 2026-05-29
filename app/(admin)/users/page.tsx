@@ -145,7 +145,11 @@ export default function UserManagement() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700">
-                  {users.map((user) => (
+                  {users.filter((u) => {
+                    if (!searchTerm) return true;
+                    const q = searchTerm.toLowerCase();
+                    return u.email?.toLowerCase().includes(q) || u.name?.toLowerCase().includes(q);
+                  }).map((user) => (
                     <tr key={user.id} className="hover:bg-slate-700/50 transition-colors">
                       <td className="px-6 py-3 text-white font-medium">{user.name}</td>
                       <td className="px-6 py-3 text-slate-300 text-sm">{user.email}</td>

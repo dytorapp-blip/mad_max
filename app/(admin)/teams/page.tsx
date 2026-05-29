@@ -1,76 +1,227 @@
 'use client';
 
-import { useState } from 'react';
-import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiUsers } from 'react-icons/fi';
+import { useEffect, useState } from 'react';
+import {
+  FiUsers,
+  FiChevronLeft,
+  FiChevronRight,
+  FiRefreshCw,
+  FiAlertCircle,
+} from 'react-icons/fi';
+import { teamsAPI } from '@/lib/api/endpoints';
 
-export default function TeamManagement() {
-  const [teams] = useState([
-    { id: 1, name: 'Engineering', members: 8, lead: 'John Doe', status: 'active', created: '2024-01-10' },
-    { id: 2, name: 'Marketing', members: 5, lead: 'Jane Smith', status: 'active', created: '2024-01-15' },
-    { id: 3, name: 'Sales', members: 6, lead: 'Mike Johnson', status: 'active', created: '2024-02-01' },
-    { id: 4, name: 'Support', members: 4, lead: 'Sarah Williams', status: 'active', created: '2024-02-15' },
-  ]);
+type Team = {
+  id: string;
+  name: string;
+  ownerEmail: string;
+  ownerName: string | null;
+  tier: string;
+  subscriptionStatus: string | null;
+  nextBillingAt: string | null;
+  memberCount: number;
+  createdAt: string;
+};
 
-  const [searchTerm, setSearchTerm] = useState('');
+type Pagination = { page: number; limit: number; total: number; pages: number };
+
+const TIER_COLORS: Record<string, string> = {
+  starter: 'text-slate-400',
+  flow: 'text-blue-400',
+  apex: 'text-amber-400',
+};
+
+const STATUS_BADGE: Record<string, string> = {
+  active: 'bg-emerald-900/40 text-emerald-300 border border-emerald-800',
+  cancelled: 'bg-red-900/40 text-red-300 border border-red-800',
+  downgrade_pending: 'bg-amber-900/40 text-amber-300 border border-amber-800',
+};
+
+const fmtDate = (s: string | null) =>
+  s ? new Date(s).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+
+export default function TeamsPage() {
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [pagination, setPagination] = useState<Pagination | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [tierFilter, setTierFilter] = useState('all');
+
+  async function fetchTeams(p = page, tier = tierFilter) {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await teamsAPI.getAll({ page: p, limit: 50, tier });
+      setTeams(res.data.data);
+      setPagination(res.data.pagination);
+    } catch (err: any) {
+      setError(err?.response?.data?.error ?? 'Failed to load teams');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchTeams();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function applyTier(tier: string) {
+    setTierFilter(tier);
+    setPage(1);
+    fetchTeams(1, tier);
+  }
+
+  function goPage(p: number) {
+    setPage(p);
+    fetchTeams(p);
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="rounded-lg bg-red-950/30 border border-red-900 p-6 flex items-center gap-3">
+          <FiAlertCircle className="text-red-400 text-xl flex-shrink-0" />
+          <p className="text-red-300">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-8">
+      <div className="mb-8 flex items-start justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-white mb-2">Team Management</h2>
-          <p className="text-gray-400">Organize and manage teams</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Teams</h1>
+          <p className="text-slate-400">
+            {pagination ? `${pagination.total} workspace${pagination.total !== 1 ? 's' : ''}` : 'All workspaces'}
+          </p>
         </div>
-        <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
-          <FiPlus size={20} />
-          Create Team
+        <button
+          onClick={() => fetchTeams()}
+          disabled={loading}
+          className="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-400 hover:text-slate-200 rounded text-sm transition-colors disabled:opacity-50"
+        >
+          <FiRefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          Refresh
         </button>
       </div>
 
-      {/* Search */}
-      <div className="mb-6">
-        <div className="relative">
-          <FiSearch className="absolute left-3 top-3 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Search teams..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-600"
-          />
+      {/* Tier filter */}
+      <div className="mb-5 flex items-center gap-3">
+        <span className="text-slate-500 text-sm">Filter:</span>
+        <div className="flex rounded border border-slate-700 overflow-hidden">
+          {['all', 'flow', 'apex', 'starter'].map((t) => (
+            <button
+              key={t}
+              onClick={() => applyTier(t)}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors capitalize ${
+                tierFilter === t
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {t === 'all' ? 'All tiers' : t}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Teams Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {teams.map((team) => (
-          <div key={team.id} className="bg-gray-800 rounded-lg border border-gray-700 p-6 hover:border-blue-600 transition-colors">
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                <FiUsers size={24} className="text-white" />
-              </div>
-              <span className="bg-green-900 text-green-400 text-xs px-2 py-1 rounded border border-green-700">
-                {team.status}
-              </span>
+      <div className="rounded-lg bg-slate-800 border border-slate-700 overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center">
+            <div className="inline-block animate-spin mb-3">
+              <div className="h-10 w-10 border-4 border-slate-700 border-t-blue-400 rounded-full" />
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">{team.name}</h3>
-            <p className="text-gray-400 text-sm mb-4">Lead: {team.lead}</p>
-            <div className="flex items-center justify-between mb-4 pt-4 border-t border-gray-700">
-              <span className="text-gray-300 text-sm">{team.members} members</span>
-              <span className="text-gray-400 text-xs">{team.created}</span>
-            </div>
-            <div className="flex gap-2">
-              <button className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                <FiEdit2 size={16} />
-                Edit
-              </button>
-              <button className="flex-1 py-2 bg-gray-700 hover:bg-red-600 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                <FiTrash2 size={16} />
-                Delete
-              </button>
-            </div>
+            <p className="text-slate-400">Loading teams...</p>
           </div>
-        ))}
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-900 border-b border-slate-700">
+                  <tr>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Team</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Owner</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Plan</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Status</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Members</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Next Billing</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Created</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700">
+                  {teams.map((t) => (
+                    <tr key={t.id} className="hover:bg-slate-700/40 transition-colors">
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded bg-slate-700 flex items-center justify-center flex-shrink-0">
+                            <FiUsers size={13} className="text-slate-400" />
+                          </div>
+                          <span className="text-white font-medium text-sm truncate max-w-[160px]">{t.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
+                        <p className="text-white text-sm truncate max-w-[180px]">{t.ownerName || t.ownerEmail}</p>
+                        {t.ownerName && <p className="text-slate-500 text-xs truncate max-w-[180px]">{t.ownerEmail}</p>}
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className={`font-semibold capitalize text-sm ${TIER_COLORS[t.tier] ?? 'text-white'}`}>
+                          {t.tier}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        {t.subscriptionStatus ? (
+                          <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium capitalize ${STATUS_BADGE[t.subscriptionStatus] ?? 'bg-slate-700 text-slate-300'}`}>
+                            {t.subscriptionStatus.replace('_', ' ')}
+                          </span>
+                        ) : (
+                          <span className="text-slate-500 text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-slate-300 text-sm">{t.memberCount}</td>
+                      <td className="px-5 py-3 text-slate-400 text-sm">{fmtDate(t.nextBillingAt)}</td>
+                      <td className="px-5 py-3 text-slate-500 text-xs">{fmtDate(t.createdAt)}</td>
+                    </tr>
+                  ))}
+                  {teams.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="px-5 py-10 text-center text-slate-500">
+                        No teams found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {pagination && pagination.pages > 1 && (
+              <div className="px-5 py-3 border-t border-slate-700 bg-slate-900 flex items-center justify-between">
+                <p className="text-slate-400 text-sm">
+                  {pagination.total} total · page {pagination.page} of {pagination.pages}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => goPage(page - 1)}
+                    disabled={page === 1}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-300 rounded border border-slate-600 text-sm transition-colors"
+                  >
+                    <FiChevronLeft size={14} />
+                    Prev
+                  </button>
+                  <button
+                    onClick={() => goPage(page + 1)}
+                    disabled={page >= pagination.pages}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-300 rounded border border-slate-600 text-sm transition-colors"
+                  >
+                    Next
+                    <FiChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

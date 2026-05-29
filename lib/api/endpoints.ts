@@ -41,4 +41,20 @@ export const billingAPI = {
     api.get('/admin/billing/activity', { params: { limit } }),
 };
 
+export const teamsAPI = {
+  getAll: (params?: { page?: number; limit?: number; tier?: string }) =>
+    api.get('/admin/teams', { params }),
+};
+
+export const appealsAPI = {
+  getAll: (status = 'all') =>
+    api.get('/admin/appeals', { params: { status } }),
+  resolve: (appealId: string, status: 'approved' | 'rejected', note?: string) =>
+    api.patch(`/admin/appeals/${appealId}`, { status, note }),
+};
+
+export const errorsAPI = {
+  clearAll: () => api.post('/admin/errors/clear'),
+};
+
 export default api;
