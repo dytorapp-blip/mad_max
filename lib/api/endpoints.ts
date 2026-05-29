@@ -57,4 +57,9 @@ export const errorsAPI = {
   clearAll: () => api.post('/admin/errors/clear'),
 };
 
+export const updatesAPI = {
+  notifyUsers: (version: string, releaseNotes?: string) =>
+    api.post('/admin/notify-update', { version, releaseNotes }),
+};
+
 export default api;

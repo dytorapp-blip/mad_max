@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { FiAlertTriangle, FiTrash2, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
-import { errorsAPI } from '@/lib/api/endpoints';
+import { FiAlertTriangle, FiTrash2, FiAlertCircle, FiCheckCircle, FiBell, FiSend } from 'react-icons/fi';
+import { errorsAPI, updatesAPI } from '@/lib/api/endpoints';
 
 type Toast = { type: 'success' | 'error'; message: string } | null;
 
@@ -10,6 +10,10 @@ export default function Settings() {
   const [clearingErrors, setClearingErrors] = useState(false);
   const [toast, setToast] = useState<Toast>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+
+  const [updateVersion, setUpdateVersion] = useState('');
+  const [updateNotes, setUpdateNotes] = useState('');
+  const [sendingUpdate, setSendingUpdate] = useState(false);
 
   function showToast(type: 'success' | 'error', message: string) {
     setToast({ type, message });
@@ -30,6 +34,21 @@ export default function Settings() {
       showToast('error', 'Failed to clear error logs.');
     } finally {
       setClearingErrors(false);
+    }
+  }
+
+  async function handleNotifyUpdate() {
+    if (!updateVersion.trim()) return;
+    setSendingUpdate(true);
+    try {
+      const res = await updatesAPI.notifyUsers(updateVersion.trim(), updateNotes.trim() || undefined);
+      showToast('success', `Notified ${res.data.sent} user${res.data.sent !== 1 ? 's' : ''} · ${res.data.skipped} skipped.`);
+      setUpdateVersion('');
+      setUpdateNotes('');
+    } catch (err: any) {
+      showToast('error', err?.response?.data?.error ?? 'Failed to send notifications.');
+    } finally {
+      setSendingUpdate(false);
     }
   }
 
@@ -72,6 +91,49 @@ export default function Settings() {
               <span className="text-white text-sm font-medium">{value}</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Update notification */}
+      <div className="rounded-lg bg-slate-800 border border-slate-700 overflow-hidden mb-8">
+        <div className="px-6 py-4 border-b border-slate-700 bg-slate-900 flex items-center gap-2">
+          <FiBell className="text-blue-400" size={16} />
+          <h2 className="text-base font-semibold text-white">Notify users of update</h2>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <p className="text-slate-400 text-sm">
+            Sends an in-app notification to all connected desktop clients instantly, and an email to every registered user.
+          </p>
+          <div className="flex gap-3">
+            <div className="w-36 flex-shrink-0">
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Version</label>
+              <input
+                type="text"
+                placeholder="e.g. v1.2.0"
+                value={updateVersion}
+                onChange={(e) => setUpdateVersion(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-600 focus:outline-none focus:border-slate-500"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Release notes (optional)</label>
+              <textarea
+                rows={2}
+                placeholder="What's new in this version…"
+                value={updateNotes}
+                onChange={(e) => setUpdateNotes(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-600 focus:outline-none focus:border-slate-500 resize-none"
+              />
+            </div>
+          </div>
+          <button
+            onClick={handleNotifyUpdate}
+            disabled={sendingUpdate || !updateVersion.trim()}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <FiSend size={14} />
+            {sendingUpdate ? 'Sending…' : 'Send notification'}
+          </button>
         </div>
       </div>
 
