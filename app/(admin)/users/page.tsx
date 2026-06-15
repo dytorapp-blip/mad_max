@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FiSearch, FiEdit2, FiTrash2, FiUsers, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiSearch, FiEdit2, FiTrash2, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { userAPI } from '@/lib/api/endpoints';
 
 export default function UserManagement() {
