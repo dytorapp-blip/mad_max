@@ -71,8 +71,8 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const hasPermission = useCallback((permission: string) => {
-    return currentUser.permissions?.includes(permission) ||
-           currentUser.permissions?.includes('*');
+    return (currentUser.permissions?.includes(permission) ?? false) ||
+           (currentUser.permissions?.includes('*') ?? false);
   }, [currentUser.permissions]);
 
   const value: AdminContextType = {
