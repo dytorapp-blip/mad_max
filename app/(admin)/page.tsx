@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FiUsers, FiZap, FiBarChart2, FiClock, FiAlertCircle, FiCheck, FiActivity } from 'react-icons/fi';
+import { FiUsers, FiZap, FiBarChart2, FiAlertCircle, FiCheck, FiActivity } from 'react-icons/fi';
 import { dashboardAPI, healthAPI } from '@/lib/api/endpoints';
 
 const MetricCard = ({ label, value, icon: Icon, change }: any) => (
