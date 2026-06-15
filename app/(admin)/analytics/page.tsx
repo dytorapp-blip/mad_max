@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { analyticsAPI } from '@/lib/api/endpoints';
-import { FiAlertTriangle } from 'react-icons/fi';
+import { FiAlertTriangle, FiCheckCircle } from 'react-icons/fi';
 
 export default function Analytics() {
   const [usage, setUsage] = useState<any>(null);
